@@ -19,8 +19,8 @@ LearnMoreLinks,
 ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
 import { useDispatch, useSelector } from 'react-redux';
-import { AuthUpdate } from './redux/AuthSlice';
-import { signIn } from './redux/ActionCreater';
+import { AuthUpdate } from '../redux/AuthSlice';
+import { signIn } from '../redux/ActionCreater';
 
 
 const AdminLoginScreen =  ({navigation}) => {

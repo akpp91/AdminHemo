@@ -1,10 +1,12 @@
 import { emailChange, loginSuccess, passwordChange, setLoadingFalse } from "./AuthSlice";
-import { getAuth,signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
+// import { getAuth,signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+// import { collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
 
 import { Alert } from "react-native";
 import { employeeUpdate } from "./employeeSlice";
-import { db } from "../common/firebaseApp";
+
+import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import { app, auth } from "../common/FireStoreapp";
 
 
 
@@ -30,18 +32,19 @@ export async function signIn(auth, email, password, navigation, dispatch) {
 }
 
 // Function for Sign Up
-export async function signUp(auth, email, password, navigation, dispatch) {
+export async function signUp(email, password, navigation, dispatch) {
+ console.log(auth);
+ console.log(email);
   try {
     // Attempt to create a new account
-    const user = await createUserWithEmailAndPassword(auth, email, password);
+    const user = await createUserWithEmailAndPassword(auth , email, password);
 
     // If successful, dispatch login success action
     dispatch(loginSuccess(user));
     dispatch(setLoadingFalse(false));
-    dispatch(setAuth(auth));
 
     // Proceed with any post-creation logic
-    console.log("signUp - where u wnat to go");
+    Alert.alert("signUp - where u want to go");
     // navigation.navigate('');
   } catch (createError) {
     // Handle account creation failure here
@@ -51,7 +54,7 @@ export async function signUp(auth, email, password, navigation, dispatch) {
 
 // Common function for handling authentication failures
 function AuthenticationFails(createError, dispatch) {
-  dispatch(setLoadingFalse(false));
+  // dispatch(setLoadingFalse(false));
   console.error("Error creating account:", createError);
 
   if (createError.code === 'auth/weak-password') {
