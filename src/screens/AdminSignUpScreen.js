@@ -7,28 +7,34 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import Modal from 'react-native-modal';
 import { signUp } from '../redux/ActionCreater';
 import { useDispatch, useSelector } from 'react-redux';
 import { AuthUpdate, selectedConditionsSlice, selectedConditionsUpdate } from '../redux/AuthSlice';
-import { auth } from '../common/FireStoreapp';
+import { auth, db } from '../common/FireStoreapp';
+import { getFirestore, collection, addDoc, doc, setDoc } from 'firebase/firestore';
 
+const AdminSignUpScreen = ({ navigation }) => {
 
-const AdminSignUpScreen = ({navigation}) => {
-  
   const dispatch = useDispatch()
-  
-  
-  const {email, password,
-  mobileNumber,
-  hemophiliaOrThalassemia, 
-  hospitalName,
-  district,
-  taluka,
-  isConditionModalVisible,
-  selectedConditions,
-} = useSelector((state) => state.Auth1);
+
+
+  const { email,
+    password,
+    mobileNumber,
+    state,
+    hospitalName,
+    district,
+    taluka,
+    isConditionModalVisible,
+    selectedConditions,
+    loading,
+
+  } = useSelector((state) => state.Auth1);
+
 
   const conditions = ['Hemophilia A', 'Hemophilia B', 'Thalassemia'];
 
@@ -46,19 +52,75 @@ const AdminSignUpScreen = ({navigation}) => {
     if (selectedConditions.includes(condition)) {
       // Condition already selected, remove it
       const index = selectedConditions.indexOf(condition);
-    
+
       dispatch(selectedConditionsSlice(index))
     } else {
       // Condition not selected, add it
-      
+
       dispatch(selectedConditionsUpdate(condition))
-    }    
+    }
   };
 
 
   const onPressSignUp = () => {
+
+    const missingFields = [];
+
+  // Check each required field
+  if (!email) {
+    missingFields.push('Email');
+  }
+
+  if (!password) {
+    missingFields.push('Password');
+  }
+
+  if (!mobileNumber) {
+    missingFields.push('Mobile Number');
+  } else if (mobileNumber.length !== 10) {
+    // Check if the mobile number is exactly 10 digits long
+    Alert.alert('Error', 'Mobile Number should be exactly 10 digits');
+    return;
+  }
+
+  if (!hospitalName) {
+    missingFields.push('Hospital Name');
+  }
+
+  if (!state) {
+    missingFields.push('State');
+  }
+
+  if (!district) {
+    missingFields.push('District');
+  }
+
+  if (!taluka) {
+    missingFields.push('Taluka');
+  }
+
+  if (selectedConditions.length === 0) {
+    missingFields.push('Select Conditions');
+  }
+
+  // Check if any field is missing
+  if (missingFields.length > 0) {
+    // Construct the warning message
+    const warningMessage = `Please fill in the following fields:\n\n${missingFields.join('\n')}`;
+
+    // Show an alert with the warning message
+    Alert.alert('Error', warningMessage);
+    return;
+  }
+
     // Handle signup operation
-    signUp(email, password, navigation, dispatch)
+    signUp(email, password, navigation, dispatch,
+      selectedConditions,
+      district,
+      hospitalName,
+      mobileNumber,
+      taluka);
+
   };
 
   return (
@@ -67,6 +129,7 @@ const AdminSignUpScreen = ({navigation}) => {
         <View style={styles.inputView}>
           <TextInput
             style={styles.inputText}
+            value={email}
             placeholder="Email"
             placeholderTextColor="#003f5c"
             onChangeText={(text) => dispatch(AuthUpdate({ prop: 'email', value: text }))}
@@ -75,6 +138,7 @@ const AdminSignUpScreen = ({navigation}) => {
         <View style={styles.inputView}>
           <TextInput
             style={styles.inputText}
+            value={password}
             secureTextEntry
             placeholder="Password"
             placeholderTextColor="#003f5c"
@@ -84,6 +148,7 @@ const AdminSignUpScreen = ({navigation}) => {
         <View style={styles.inputView}>
           <TextInput
             style={styles.inputText}
+            value={mobileNumber}
             placeholder="Mobile Number"
             placeholderTextColor="#003f5c"
             onChangeText={(text) => dispatch(AuthUpdate({ prop: 'mobileNumber', value: text }))}
@@ -121,6 +186,7 @@ const AdminSignUpScreen = ({navigation}) => {
           <TextInput
             style={styles.inputText}
             placeholder="Hospital Name"
+            value={hospitalName}
             placeholderTextColor="#003f5c"
             onChangeText={(text) => dispatch(AuthUpdate({ prop: 'hospitalName', value: text }))}
           />
@@ -129,6 +195,7 @@ const AdminSignUpScreen = ({navigation}) => {
           <TextInput
             style={styles.inputText}
             placeholder="State"
+            value={state}
             placeholderTextColor="#003f5c"
             onChangeText={(text) => dispatch(AuthUpdate({ prop: 'state', value: text }))}
           />
@@ -136,6 +203,7 @@ const AdminSignUpScreen = ({navigation}) => {
         <View style={styles.inputView}>
           <TextInput
             style={styles.inputText}
+            value={district}
             placeholder="District"
             placeholderTextColor="#003f5c"
             onChangeText={(text) => dispatch(AuthUpdate({ prop: 'district', value: text }))}
@@ -144,6 +212,7 @@ const AdminSignUpScreen = ({navigation}) => {
         <View style={styles.inputView}>
           <TextInput
             style={styles.inputText}
+            value={taluka}
             placeholder="Taluka"
             placeholderTextColor="#003f5c"
             onChangeText={(text) => dispatch(AuthUpdate({ prop: 'taluka', value: text }))}
@@ -163,7 +232,7 @@ const styles = StyleSheet.create({
     // flex: 1,
     // justifyContent: 'center',
     // alignItems: 'center',
-    height:800
+    height: 800
   },
   container: {
     flex: 1,
@@ -204,7 +273,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
     marginBottom: 10,
   },
-modalContainer: {
+  modalContainer: {
     backgroundColor: '#4FD3DA',
     padding: 20,
     borderRadius: 10,

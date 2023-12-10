@@ -1,4 +1,4 @@
-import { emailChange, loginSuccess, passwordChange, setLoadingFalse } from "./AuthSlice";
+import { emailChange, loginSuccess, passwordChange, resetState, setLoadingFalse } from "./AuthSlice";
 // import { getAuth,signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 // import { collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
 
@@ -6,8 +6,10 @@ import { Alert } from "react-native";
 import { employeeUpdate } from "./employeeSlice";
 
 import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
-import { app, auth } from "../common/FireStoreapp";
+import { app, auth, db } from "../common/FireStoreapp";
+import {   setAuth } from "./AuthSlice";
 
+import { setDoc, doc, collection } from 'firebase/firestore';
 
 
 // Function for Sign In
@@ -19,7 +21,6 @@ export async function signIn(auth, email, password, navigation, dispatch) {
     // If successful, dispatch login success action
     dispatch(loginSuccess(user));
     dispatch(setLoadingFalse(false));
-    dispatch(setAuth(auth));
 
     // Proceed with any post-login logic
     console.log("signIn - where u wnat to go");
@@ -32,9 +33,13 @@ export async function signIn(auth, email, password, navigation, dispatch) {
 }
 
 // Function for Sign Up
-export async function signUp(email, password, navigation, dispatch) {
- console.log(auth);
- console.log(email);
+export async function signUp(email, password, navigation, dispatch,
+  selectedConditions,
+  district,
+  hospitalName,
+  mobileNumber,
+  taluka) {
+
   try {
     // Attempt to create a new account
     const user = await createUserWithEmailAndPassword(auth , email, password);
@@ -42,10 +47,24 @@ export async function signUp(email, password, navigation, dispatch) {
     // If successful, dispatch login success action
     dispatch(loginSuccess(user));
     dispatch(setLoadingFalse(false));
+    
+    const userDocRef = doc(collection(db, "AdminUsers"), email);
 
+    // Add user data to Firestore
+    const userRef = await setDoc(userDocRef, {
+      conditions: selectedConditions,
+      district: district,
+      email: email,
+      hospitalName: hospitalName,
+      mobileNumber: mobileNumber,
+      password: password,
+      taluka: taluka,
+    });
     // Proceed with any post-creation logic
-    Alert.alert("signUp - where u want to go");
-    // navigation.navigate('');
+
+    dispatch(resetState())
+    Alert.alert("registration successful ")
+    navigation.navigate('AdminLoginScreen');
   } catch (createError) {
     // Handle account creation failure here
     AuthenticationFails(createError, dispatch);
@@ -55,7 +74,7 @@ export async function signUp(email, password, navigation, dispatch) {
 // Common function for handling authentication failures
 function AuthenticationFails(createError, dispatch) {
   // dispatch(setLoadingFalse(false));
-  console.error("Error creating account:", createError);
+  console.log("Error creating account:", createError);
 
   if (createError.code === 'auth/weak-password') {
     Alert.alert('Error', 'Password should be at least 6 characters');

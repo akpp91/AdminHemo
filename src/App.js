@@ -1,12 +1,15 @@
 import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import React, { useEffect } from 'react'
 import AdminLoginScreen from './screens/AdminLoginScreen'
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AdminSignUpScreen from './screens/AdminSignUpScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import store from './redux/store';
-import { Provider } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import AdminHome from './screens/AdminHome';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { auth } from './common/FireStoreapp';
+import { AuthUpdate } from './redux/AuthSlice';
 
 
 const stack = createNativeStackNavigator();
@@ -16,7 +19,7 @@ const AuthStack = createNativeStackNavigator();
 const HospitalStack = createNativeStackNavigator()
 
 
-const AppNavigator = ({ auth, db }) => {
+const AppNavigator = () => {
   return (
     <AuthStack.Navigator initialRouteName='AdminLoginScreen'>
 
@@ -37,7 +40,9 @@ const AppNavigator = ({ auth, db }) => {
 };
 
 
-const AppNavigator2 = ({ auth, db }) => {
+const AppNavigator2 = () => {
+
+
   return (
     <HospitalStack.Navigator initialRouteName='AdminHome'>
 
@@ -54,12 +59,39 @@ const AppNavigator2 = ({ auth, db }) => {
 
 
 const App = () => {
+  const {user, initializing} = useSelector((state)=>state.Auth1)
+  const dispatch = useDispatch();
+
+  console.log(initializing);
+
+  function onAuthStateChanged(user) {
+    console.log(user);
+    dispatch(AuthUpdate({ prop: 'user', value: user }))
+    if (initializing) dispatch(AuthUpdate({ prop: 'initializing', value: false }));
+  }
+  
+  console.log(initializing);
+
+useEffect(()=>{
+  const subscriber = auth.onAuthStateChanged(onAuthStateChanged);
+    return subscriber;
+
+},[])
+
+if (initializing) return null;
+
   return (
-    <Provider store={store}>
+   
+      user ? 
       <NavigationContainer>
         <AppNavigator />
       </NavigationContainer>
-    </Provider>
+      :
+      <NavigationContainer>
+        <AppNavigator2 />
+      </NavigationContainer>
+
+    
   )
 }
 

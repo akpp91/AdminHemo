@@ -14,8 +14,8 @@ const initialState = {
   isLoggedIn: false,
   user: null,
   loading: false,
-  auth:null   ,
   
+  initializing:true
 
 };
 
@@ -63,11 +63,21 @@ export const AuthSlice = createSlice({
     setAuth(state, action)
     {
       return {...state, auth:action.payload };
-    }
+    },
+
+    resetState(state) {
+      // Assuming initialState is imported here or copied from the slice
+      return {
+        ...initialState,
+        initializing: false, // Assuming you want to set initializing to false
+        isLoggedIn: state.isLoggedIn, // Keep isLoggedIn unchanged
+        user: state.user, // Keep user unchanged
+      };    }
+
   },
 });
 
-export const { selectedConditionsSlice,selectedConditionsUpdate,AuthUpdate,setAuth, setLoadingFalse, setLoading,loginSuccess ,logoutSuccess, loginUser,emailChange, passwordChange } = AuthSlice.actions;
+export const { resetState , selectedConditionsSlice,selectedConditionsUpdate,AuthUpdate,setAuth, setLoadingFalse, setLoading,loginSuccess ,logoutSuccess, loginUser,emailChange, passwordChange } = AuthSlice.actions;
 // This line is exporting the action creator function setMessage that was automatically generated 
 // by createSlice. You can use this function in your React components to dispatch actions 
 // that the messageSlice reducer can respond to.
