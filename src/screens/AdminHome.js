@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Alert, StyleSheet } from 'react-native';
-
+import Toast from 'react-native-toast-message';
 import { useSelector } from 'react-redux';
 import { getFirestore, collection, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../common/FireStoreapp';
@@ -27,7 +27,6 @@ const AdminHome = () => {
       // Assuming 'conditions' is the field in AdminUsers storing the array of conditions
       const userDocSnapshot = await getDoc(userDocRef);
       const userConditions = userDocSnapshot.data()?.conditions || [];
-      console.log(userConditions);
       setConditions(userConditions);
       setMedicine(userConditions.isMedicineAvailable ? "Yes" : "No");
 
@@ -39,7 +38,6 @@ const AdminHome = () => {
   const handleResponse = async (response) => {
     
     try {
-      console.log(`Response for ${selectedCondition}: ${response}`);
 
     // Find the index of the selected condition in the conditions array
     const index = conditions.findIndex((condition) => condition.condition === selectedCondition);
@@ -80,16 +78,25 @@ const AdminHome = () => {
       // Fetch conditions after updating to reflect changes
       await fetchConditions();
 
-      // Show an alert when the condition gets successfully updated
-      Alert.alert('Success', `Condition for ${selectedCondition} updated successfully`);
+      // Show a toast when the condition gets successfully updated
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: `Medicine Availability for ${selectedCondition} updated successfully`,
+      });
 
       // Clear the selected condition and userResponses state after saving
       setUserResponses({});
       setSelectedCondition(null);
     } catch (error) {
       console.error('Error updating Firestore:', error);
-      // Handle the error as needed
-      Alert.alert('Error updating Firestore');
+
+      // Show an error toast
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Error updating Firestore',
+      });
     }
   };
   
@@ -131,6 +138,8 @@ const AdminHome = () => {
           }}
         />
       )} */}
+     <Toast  />
+
     </View>
   );
 };
