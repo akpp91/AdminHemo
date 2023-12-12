@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AuthUpdate, selectedConditionsSlice, selectedConditionsUpdate } from '../redux/AuthSlice';
 import { auth, db } from '../common/FireStoreapp';
 import { getFirestore, collection, addDoc, doc, setDoc } from 'firebase/firestore';
+import Spinner from '../common/Spinner';
 
 const AdminSignUpScreen = ({ navigation }) => {
 
@@ -36,7 +37,9 @@ const AdminSignUpScreen = ({ navigation }) => {
   } = useSelector((state) => state.Auth1);
 
 
-  const conditions = ['Hemophilia A', 'Hemophilia B', 'Thalassemia'];
+  const conditions = [{ condition: 'Hemophilia A', isMedicineAvailable: false },
+  { condition: 'Hemophilia B', isMedicineAvailable: false },
+  { condition: 'Thalassemia', isMedicineAvailable: false }];
 
   const toggleConditionModal = () => {
     dispatch(AuthUpdate({ prop: 'isConditionModalVisible', value: !isConditionModalVisible }))
@@ -49,69 +52,87 @@ const AdminSignUpScreen = ({ navigation }) => {
   };
 
   const handleConditionPress = (condition) => {
-    if (selectedConditions.includes(condition)) {
+    // debugger;
+    const isConditionSelected = selectedConditions.some(
+      (item) => item.condition === condition
+    );
+    
+    
+
+    if (isConditionSelected) {
       // Condition already selected, remove it
-      const index = selectedConditions.indexOf(condition);
-
-      dispatch(selectedConditionsSlice(index))
-    } else {
+      const index = selectedConditions.findIndex(
+        (item) => item.condition === condition
+      );
+    
+      dispatch(selectedConditionsSlice(index));
+    } 
+    
+    else {
+      
       // Condition not selected, add it
-
-      dispatch(selectedConditionsUpdate(condition))
+      dispatch(selectedConditionsUpdate(condition));
     }
   };
 
 
+
   const onPressSignUp = () => {
+
+    dispatch(AuthUpdate({ prop: 'loading', value: true }))
 
     const missingFields = [];
 
-  // Check each required field
-  if (!email) {
-    missingFields.push('Email');
-  }
+    // Check each required field
+    if (!email) {
+      missingFields.push('Email');
+    }
 
-  if (!password) {
-    missingFields.push('Password');
-  }
+    if (!password) {
+      missingFields.push('Password');
+    }
 
-  if (!mobileNumber) {
-    missingFields.push('Mobile Number');
-  } else if (mobileNumber.length !== 10) {
-    // Check if the mobile number is exactly 10 digits long
-    Alert.alert('Error', 'Mobile Number should be exactly 10 digits');
-    return;
-  }
+    if (!mobileNumber) {
+      missingFields.push('Mobile Number');
+    } else if (mobileNumber.length !== 10) {
+      // Check if the mobile number is exactly 10 digits long
+      Alert.alert('Error', 'Mobile Number should be exactly 10 digits');
+      dispatch(AuthUpdate({ prop: 'loading', value: false }))
 
-  if (!hospitalName) {
-    missingFields.push('Hospital Name');
-  }
+      return;
+    }
 
-  if (!state) {
-    missingFields.push('State');
-  }
+    if (!hospitalName) {
+      missingFields.push('Hospital Name');
+    }
 
-  if (!district) {
-    missingFields.push('District');
-  }
+    if (!state) {
+      missingFields.push('State');
+    }
 
-  if (!taluka) {
-    missingFields.push('Taluka');
-  }
+    if (!district) {
+      missingFields.push('District');
+    }
 
-  if (selectedConditions.length === 0) {
-    missingFields.push('Select Conditions');
-  }
+    if (!taluka) {
+      missingFields.push('Taluka');
+    }
 
-  // Check if any field is missing
-  if (missingFields.length > 0) {
-    // Construct the warning message
-    const warningMessage = `Please fill in the following fields:\n\n${missingFields.join('\n')}`;
+    if (selectedConditions.length === 0) {
+      missingFields.push('Select Conditions');
+    }
 
-    // Show an alert with the warning message
-    Alert.alert('Error', warningMessage);
-    return;
-  }
+    // Check if any field is missing
+    if (missingFields.length > 0) {
+      // Construct the warning message
+      const warningMessage = `Please fill in the following fields:\n\n${missingFields.join('\n')}`;
+
+      // Show an alert with the warning message
+      Alert.alert('Error', warningMessage);
+      dispatch(AuthUpdate({ prop: 'loading', value: false }))
+
+      return;
+    }
 
     // Handle signup operation
     signUp(email, password, navigation, dispatch,
@@ -119,7 +140,8 @@ const AdminSignUpScreen = ({ navigation }) => {
       district,
       hospitalName,
       mobileNumber,
-      taluka);
+      taluka, 
+      loading);
 
   };
 
@@ -164,14 +186,15 @@ const AdminSignUpScreen = ({ navigation }) => {
             <Text style={styles.modalTitle}>Select Conditions</Text>
             {conditions.map((condition) => (
               <TouchableOpacity
-                key={condition}
+                key={condition.condition}
                 style={styles.conditionItem}
-                onPress={() => handleConditionPress(condition)}
+                onPress={() => handleConditionPress(condition.condition)}
               >
-                <Text style={styles.conditionText}>{condition}</Text>
-                {selectedConditions.includes(condition) ? (
+                <Text style={styles.conditionText}>{condition.condition}</Text>
+                {selectedConditions.some(item => item.condition === condition.condition) ? (
                   <Text style={styles.checkmark}>✓</Text>
                 ) : null}
+
               </TouchableOpacity>
             ))}
 
@@ -219,13 +242,21 @@ const AdminSignUpScreen = ({ navigation }) => {
           />
         </View>
 
-        <TouchableOpacity onPress={onPressSignUp} style={styles.loginBtn}>
-          <Text style={styles.loginText}>Sign UP </Text>
-        </TouchableOpacity>
+
+
+        {loading ? (
+          <Spinner />
+        ) : (
+          <TouchableOpacity onPress={onPressSignUp} style={styles.loginBtn}>
+            <Text style={styles.loginText}>Sign UP</Text>
+          </TouchableOpacity>
+        )}
+
       </View>
     </ScrollView>
   );
 };
+
 
 const styles = StyleSheet.create({
   scrollContainer: {

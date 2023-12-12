@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+
 const initialState = {
   email:'',
   password:'',
@@ -29,26 +30,25 @@ export const AuthSlice = createSlice({
     return{ ...state , [action.payload.prop]:action.payload.value }
     },
 
-    selectedConditionsUpdate(state,action){
-        state.selectedConditions.push(action.payload)
-    }
-    ,
+    selectedConditionsUpdate(state, action) {
+      state.selectedConditions.push({ condition: action.payload, isMedicineAvailable: false });
+    },
+    
+    
     selectedConditionsSlice(state,action){
       state.selectedConditions.splice(action.payload, 1);
-  }
+    }
     ,
     
     loginSuccess(state, action) {
       state.isLoggedIn = true;
       state.user = action.payload;
-      state.loading=false;      
 
     },
     logoutSuccess(state) {
-      state.isLoggedIn = false;
-      state.user = null;
-      state.email='',
-      state.password=''
+      return{...state, isLoggedIn : false, user : null} 
+      
+      
     },
     setLoading(state , action)
     {
@@ -60,16 +60,12 @@ export const AuthSlice = createSlice({
       return {...state, loading:action.payload };
     },
 
-    setAuth(state, action)
-    {
-      return {...state, auth:action.payload };
-    },
 
     resetState(state) {
       // Assuming initialState is imported here or copied from the slice
       return {
         ...initialState,
-        initializing: false, // Assuming you want to set initializing to false
+        initializing: false, 
         isLoggedIn: state.isLoggedIn, // Keep isLoggedIn unchanged
         user: state.user, // Keep user unchanged
       };    }
@@ -85,7 +81,6 @@ export const { resetState , selectedConditionsSlice,selectedConditionsUpdate,Aut
 // Selectors
 export const userSelectors = {
   isLoggedIn: (state) => state.user.isLoggedIn,
-  user: (state) => state.user.user,
   loading:(state) => state.user.loading,
 };
 

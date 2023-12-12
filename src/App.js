@@ -10,6 +10,7 @@ import AdminHome from './screens/AdminHome';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { auth } from './common/FireStoreapp';
 import { AuthUpdate } from './redux/AuthSlice';
+import PasswordResetScreen from './screens/PasswordResetScreen';
 
 
 const stack = createNativeStackNavigator();
@@ -26,7 +27,7 @@ const AppNavigator = () => {
       <AuthStack.Screen name='AdminLoginScreen'
         component={AdminLoginScreen}
         options={{
-          title: "Admin Login"
+          title: "AdminLoginScreen"
         }} />
 
       <AuthStack.Screen name='AdminSignUpScreen'
@@ -35,6 +36,12 @@ const AppNavigator = () => {
           title: "AdminSignUpScreen"
         }} />
 
+      <AuthStack.Screen name='PasswordResetScreen'
+        component={PasswordResetScreen}
+        options={{
+          title: "PasswordResetScreen"
+        }} />
+      
     </AuthStack.Navigator>
   );
 };
@@ -59,39 +66,39 @@ const AppNavigator2 = () => {
 
 
 const App = () => {
-  const {user, initializing} = useSelector((state)=>state.Auth1)
+  const { user, initializing } = useSelector((state) => state.Auth1)
   const dispatch = useDispatch();
 
-  console.log(initializing);
 
   function onAuthStateChanged(user) {
-    console.log(user);
+
+    
     dispatch(AuthUpdate({ prop: 'user', value: user }))
+    
     if (initializing) dispatch(AuthUpdate({ prop: 'initializing', value: false }));
   }
-  
-  console.log(initializing);
 
-useEffect(()=>{
-  const subscriber = auth.onAuthStateChanged(onAuthStateChanged);
+
+  useEffect(() => {
+    const subscriber = auth.onAuthStateChanged(onAuthStateChanged);
     return subscriber;
 
-},[])
+  }, [])
 
-if (initializing) return null;
+  if (initializing) return null;
 
   return (
-   
-      user ? 
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
-      :
+
+    user ?
       <NavigationContainer>
         <AppNavigator2 />
       </NavigationContainer>
+      :
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
 
-    
+
   )
 }
 

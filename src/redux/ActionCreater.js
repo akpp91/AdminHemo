@@ -1,36 +1,46 @@
-import { emailChange, loginSuccess, passwordChange, resetState, setLoadingFalse } from "./AuthSlice";
+import { AuthUpdate, emailChange, loginSuccess, passwordChange, resetState, setLoadingFalse } from "./AuthSlice";
 // import { getAuth,signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 // import { collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
 
 import { Alert } from "react-native";
 import { employeeUpdate } from "./employeeSlice";
 
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { app, auth, db } from "../common/FireStoreapp";
-import {   setAuth } from "./AuthSlice";
+import { setAuth } from "./AuthSlice";
 
 import { setDoc, doc, collection } from 'firebase/firestore';
+import SpinnerComponent from "../common/SpinnerComponent";
+import Spinner from "../common/Spinner";
 
 
-// Function for Sign In
-export async function signIn(auth, email, password, navigation, dispatch) {
+// ActionCreator for Sign In
+export const signIn = (email, password, navigation) => async (dispatch) => {
   try {
+    // Dispatch loading start action
+    dispatch(AuthUpdate({ prop: 'loading', value: true }));
+
     // Attempt to sign in
     const user = await signInWithEmailAndPassword(auth, email, password);
 
     // If successful, dispatch login success action
     dispatch(loginSuccess(user));
-    dispatch(setLoadingFalse(false));
 
     // Proceed with any post-login logic
-    console.log("signIn - where u wnat to go");
-    // navigation.navigate('EmployeeList');
+    // navigation.navigate('AdminHome');
+
   } catch (signInError) {
     // Handle sign-in failure here
-    console.error("Error signing in:", signInError);
+    AuthenticationFails(signInError, dispatch, "signIn");
     // You can add specific error handling or dispatch actions accordingly
+  } finally {
+    // Dispatch loading end action
+    dispatch(AuthUpdate({ prop: 'loading', value: false }));
+    dispatch(AuthUpdate({ prop: 'password', value: '' }));
+
   }
-}
+};
+
 
 // Function for Sign Up
 export async function signUp(email, password, navigation, dispatch,
@@ -38,16 +48,18 @@ export async function signUp(email, password, navigation, dispatch,
   district,
   hospitalName,
   mobileNumber,
-  taluka) {
-
+  taluka,
+  loading) {
   try {
+
+
     // Attempt to create a new account
-    const user = await createUserWithEmailAndPassword(auth , email, password);
+    const user = await createUserWithEmailAndPassword(auth, email, password);
+
 
     // If successful, dispatch login success action
     dispatch(loginSuccess(user));
-    dispatch(setLoadingFalse(false));
-    
+
     const userDocRef = doc(collection(db, "AdminUsers"), email);
 
     // Add user data to Firestore
@@ -62,19 +74,23 @@ export async function signUp(email, password, navigation, dispatch,
     });
     // Proceed with any post-creation logic
 
-    dispatch(resetState())
     Alert.alert("registration successful ")
-    navigation.navigate('AdminLoginScreen');
   } catch (createError) {
     // Handle account creation failure here
-    AuthenticationFails(createError, dispatch);
+    AuthenticationFails(createError, dispatch, "signUp");
+  }
+  finally {
+    // Dispatch loading end action
+    dispatch(AuthUpdate({ prop: 'loading', value: false }));
+    dispatch(resetState())
+
   }
 }
 
 // Common function for handling authentication failures
-function AuthenticationFails(createError, dispatch) {
+function AuthenticationFails(createError, dispatch, sign_up) {
   // dispatch(setLoadingFalse(false));
-  console.log("Error creating account:", createError);
+  console.log(`Error in ${sign_up}:`, createError);
 
   if (createError.code === 'auth/weak-password') {
     Alert.alert('Error', 'Password should be at least 6 characters');
@@ -91,44 +107,44 @@ function AuthenticationFails(createError, dispatch) {
   }
 }
 
-  
+
 
 export function fetchEmployeeData() {
-    return async function fetchEmployeeDataThunk(dispatch) {
-      try {
-        
-        const userEmail = getAuth().currentUser.email;
-        const userDocRef = doc(collection(db, 'users'), userEmail);
-        const employeesCollectionRef = collection(userDocRef, 'employees');
-  
-        // Fetch all documents from the "employees" collection
-        const querySnapshot = await getDocs(employeesCollectionRef);
-        
-        
-        // Extract data from the documents
-        const employeeData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-  
-        // Dispatch an action to update the state with the fetched data
-        // You may want to create a specific action for this purpose
-        // dispatch(updateEmployeeData(employeeData));
-  
-        // For now, you can log the data to the console
-        
-        dispatch(employeeUpdate({ prop: 'empList', value: employeeData }));
-      } catch (error) {
-        // Handle errors
-        console.log('Error fetching employee data:', error);
-        dispatch(setLoadingFalse(false));
-        // You may want to dispatch an action to update the state with an error message
-        // dispatch(updateErrorState(errorMessage));
-      }
-    };
-  }
+  return async function fetchEmployeeDataThunk(dispatch) {
+    try {
 
-  // Action to update an employee record in Firestore
+      const userEmail = getAuth().currentUser.email;
+      const userDocRef = doc(collection(db, 'users'), userEmail);
+      const employeesCollectionRef = collection(userDocRef, 'employees');
+
+      // Fetch all documents from the "employees" collection
+      const querySnapshot = await getDocs(employeesCollectionRef);
+
+
+      // Extract data from the documents
+      const employeeData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Dispatch an action to update the state with the fetched data
+      // You may want to create a specific action for this purpose
+      // dispatch(updateEmployeeData(employeeData));
+
+      // For now, you can log the data to the console
+
+      dispatch(employeeUpdate({ prop: 'empList', value: employeeData }));
+    } catch (error) {
+      // Handle errors
+      console.log('Error fetching employee data:', error);
+      dispatch(setLoadingFalse(false));
+      // You may want to dispatch an action to update the state with an error message
+      // dispatch(updateErrorState(errorMessage));
+    }
+  };
+}
+
+// Action to update an employee record in Firestore
 export function updateEmployeeRecord(auth, db, updatedEmployee) {
   return async function updateEmployeeRecordThunk(dispatch) {
     try {
@@ -143,8 +159,8 @@ export function updateEmployeeRecord(auth, db, updatedEmployee) {
         shift: updatedEmployee.shift,
       });
 
- Alert.alert('Employee record updated');
- dispatch(fetchEmployeeData(db));
+      Alert.alert('Employee record updated');
+      dispatch(fetchEmployeeData(db));
 
       // You may want to dispatch an action to update the Redux store if needed
     } catch (error) {
@@ -167,9 +183,9 @@ export function deleteEmployeeRecord(auth, db, employeeId) {
       dispatch(fetchEmployeeData(db));
 
       Alert.alert('Employee record deleted from Firestore');
-dispatch(employeeUpdate({ prop: 'name', value: '' }));
-    dispatch(employeeUpdate({ prop: 'phone', value: '' }));
-    dispatch(employeeUpdate({ prop: 'shift', value: 'Select Shift' }));
+      dispatch(employeeUpdate({ prop: 'name', value: '' }));
+      dispatch(employeeUpdate({ prop: 'phone', value: '' }));
+      dispatch(employeeUpdate({ prop: 'shift', value: 'Select Shift' }));
       // You may want to dispatch an action to update the Redux store if needed
     } catch (error) {
       console.error('Error deleting employee record:', error);
