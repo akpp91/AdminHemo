@@ -146,6 +146,7 @@ const AdminSignUpScreen = ({ navigation }) => {
   };
 
   return (
+    
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
         <View style={styles.inputView}>
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
     // flex: 1,
     // justifyContent: 'center',
     // alignItems: 'center',
-    height: 800
+    flexGrow:1
   },
   container: {
     flex: 1,

@@ -121,9 +121,11 @@ const styles = StyleSheet.create({
         color: "white"
     },
     forgotAndSignUpText: {
-        color: "white",
-        fontSize: 11
-    },
+        color: 'blue', // You can change the color to your preference
+        fontSize: 16,  // You can adjust the font size as needed
+        textDecorationLine: 'underline', // Underline the text, you can remove this if not needed
+        marginTop:25
+      },
     loginBtn: {
         width: "80%",
         backgroundColor: "#fb5b5a",

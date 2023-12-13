@@ -102,7 +102,10 @@ function AuthenticationFails(createError, dispatch, sign_up) {
     Alert.alert('Error', 'missing-password');
   } else if (createError.code === 'auth/missing-email') {
     Alert.alert('Error', 'missing-email');
-  } else {
+  } else if(createError.code === 'auth/network-request-failed'){
+    Alert.alert('Error', 'please cheack your internet connection');
+  }
+else {
     Alert.alert('Error', createError.message);
   }
 }

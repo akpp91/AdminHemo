@@ -1,105 +1,192 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Alert, StyleSheet } from 'react-native';
+import { View, Text, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useSelector } from 'react-redux';
-import { getFirestore, collection, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../common/FireStoreapp';
 import { getAuth } from 'firebase/auth';
 import { logoutSuccess } from '../redux/AuthSlice';
 import { Button } from '@rneui/themed';
+import NetInfo from '@react-native-community/netinfo';
+import { LogBox } from 'react-native';
 
 const AdminHome = () => {
   const [conditions, setConditions] = useState([]);
   const [selectedCondition, setSelectedCondition] = useState(null);
   const [userResponses, setUserResponses] = useState({});
-  const [isMedicineAvailable, setIsMedicineAvailable] = useState(false); // Local state for isMedicineAvailable
   const [medicineAvailabilityText, setMedicine] = useState("");
+  const netInfo = NetInfo.useNetInfo();
+  const [isLoading, setIsLoading] = useState(false); // New loading state
 
-  useEffect(() => {
-    // Fetch conditions from Firestore
-    fetchConditions();
-  },[auth.currentUser.email]); // Run this effect whenever the email changes
+  const [isNetAvailable, setisNetAvailable] = useState(null);
+  useEffect(()=>{
+    const unsubscribe = NetInfo.addEventListener(state => {
+      console.log("Is connected?", state.isConnected);
+      setisNetAvailable(state.isConnected)
+      // You can use state.isConnected to check the current internet connectivity status
+      // Handle your logic based on the connection status
+     if (!state.isConnected) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: `No internet connection. Please turn on your internet`,
+      });
+     } 
+     
+     else {
+      try {
+
+        const fetchunsubscribe = onSnapshot(doc(db, 'AdminUsers', auth.currentUser.email), (snapshot) => {
+          const userConditions = snapshot.data()?.conditions || [];
+          setConditions(userConditions);
+          setMedicine(userConditions.isMedicineAvailable ? "Yes" : "No");
+        });
+        // To stop listening when needed
+        return ()=> fetchunsubscribe()
+  
+      } catch (error) {
+        console.log(error);
+      }  
+     }
+      
+    });
+
+    return () => unsubscribe();
+
+  },[])
+  
+
+
 
   const fetchConditions = async () => {
     try {
       const userDocRef = doc(db, 'AdminUsers', auth.currentUser.email);
+      const snapshot = await getDoc(userDocRef);
 
-      // Assuming 'conditions' is the field in AdminUsers storing the array of conditions
-      const userDocSnapshot = await getDoc(userDocRef);
-      const userConditions = userDocSnapshot.data()?.conditions || [];
-      setConditions(userConditions);
-      setMedicine(userConditions.isMedicineAvailable ? "Yes" : "No");
-
+      if (snapshot.exists()) {
+        const userConditions = snapshot.data()?.conditions || [];
+        setConditions(userConditions);
+      }
     } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const handleResponse = async (response) => {
-    
-    try {
-
-    // Find the index of the selected condition in the conditions array
-    const index = conditions.findIndex((condition) => condition.condition === selectedCondition);
-
-    // Update the isMedicineAvailable property in the conditions array
-    const updatedConditions = [...conditions];
-    updatedConditions[index] = { ...updatedConditions[index], isMedicineAvailable: response };
-
-    // Update the local state immediately
-    setConditions(updatedConditions);
-
-    // Now, call handleSaveResponse asynchronously
-      await handleSaveResponse(response);  
-    } catch (error) {
-      console.log(error);
-      fetchConditions()
-    setSelectedCondition(null);
-    }
-    
-    
-  };
-
-
-  const handleSaveResponse = async (response) => {
-    try {
-      const userDocRef = doc(db, 'AdminUsers', auth.currentUser.email);
-
-      // Update the Firestore database with the user's response and isMedicineAvailable
-      await updateDoc(userDocRef, {
-        conditions: conditions.map((condition) => {
-          if (condition.condition === selectedCondition) {
-            return { ...condition, isMedicineAvailable: response };
-          }
-          return condition;
-        }),
-      });
-
-      // Fetch conditions after updating to reflect changes
-      await fetchConditions();
-
-      // Show a toast when the condition gets successfully updated
-      Toast.show({
-        type: 'success',
-        text1: 'Success',
-        text2: `Medicine Availability for ${selectedCondition} updated successfully`,
-      });
-
-      // Clear the selected condition and userResponses state after saving
-      setUserResponses({});
-      setSelectedCondition(null);
-    } catch (error) {
-      console.error('Error updating Firestore:', error);
+      console.error('Error fetching conditions from Firestore:', error);
 
       // Show an error toast
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Error updating Firestore',
+        text2: 'Error fetching conditions from Firestore',
       });
     }
   };
   
+
+  const handleResponse = async (response) => {
+    const isConnected = await checkInternetConnectivity();
+  
+    if (!isConnected) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: `No internet connection. Please turn on your internet`,
+      });
+      return;
+    }
+  
+    try {
+      // Find the index of the selected condition in the conditions array
+      const index = conditions.findIndex((condition) => condition.condition === selectedCondition);
+  
+      // Update the isMedicineAvailable property in the conditions array
+      const updatedConditions = [...conditions];
+      updatedConditions[index] = { ...updatedConditions[index], isMedicineAvailable: response };
+  
+      // Update the local state immediately (optimistically)
+      setConditions(updatedConditions);
+  
+      // Now, call handleSaveResponse asynchronously
+      await handleSaveResponse(response);
+  
+      // If handleSaveResponse is successful, the state has already been updated
+    } catch (error) {
+      console.log(error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Error handling response',
+      });
+    } finally {
+      setSelectedCondition(null);
+    }
+  };
+  
+
+  const handleSaveResponse = async (response) => {
+    
+    const isConnected = await checkInternetConnectivity();
+
+      if (!isConnected) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: `No internet connection. Please turn on your internet`,
+        });
+        return;
+      }
+
+      else{
+        try {
+      
+
+          const userDocRef = doc(db, 'AdminUsers', auth.currentUser.email);
+    
+          // Update the Firestore database with the user's response and isMedicineAvailable
+          await updateDoc(userDocRef, {
+            conditions: conditions.map((condition) => {
+              if (condition.condition === selectedCondition) {
+                return { ...condition, isMedicineAvailable: response };
+              }
+              return condition;
+            }),
+          });
+    
+          // Show a toast when the condition gets successfully updated
+          Toast.show({
+            type: 'success',
+            text1: 'Success',
+            text2: `Medicine Availability for ${selectedCondition} updated successfully`,
+          });
+          
+          // Fetch conditions after updating to reflect changes
+          await fetchConditions();
+    
+          
+    
+          // Clear the selected condition and userResponses state after saving
+          setUserResponses({});
+          setSelectedCondition(null);
+        } catch (error) {
+          console.error('Error updating Firestore:', error);
+    
+          // Show an error toast
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'Error updating Firestore',
+          });
+        }
+      }
+  };
+ 
+  const checkInternetConnectivity = async () => {
+    try {
+      const netInfoState = await NetInfo.fetch();
+      return netInfoState.isConnected;
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
+  };
+  LogBox.ignoreLogs(['@firebase/firestore']);
 
   return (
     <View style={styles.container}>
@@ -114,20 +201,23 @@ const AdminHome = () => {
           )}
           {selectedCondition === condition.condition ? (
             <View style={styles.buttonContainer}>
-              <Button title="Yes" onPress={() => handleResponse(true)} />
-              <Button title="No" onPress={() => handleResponse(false)} />
+              {isLoading ? ( // Display spinner if loading
+                <ActivityIndicator size="small" color="#0000ff" />
+              ) : (
+                <>
+                  <Button title="Yes" onPress={() => handleResponse(true)} />
+                  <Button title="No" onPress={() => handleResponse(false)} />
+                </>
+              )}
             </View>
           ) : (
-            <Button
-              title={`Update for ${condition.condition}`}
-              onPress={() => setSelectedCondition(condition.condition)}
-            />
+            <Button title={`Update for ${condition.condition}`} onPress={() => setSelectedCondition(condition.condition)} />
           )}
         </View>
       ))}
 
       {/* Display the "Log Out" button if no condition is being edited */}
-      {/* {selectedCondition === null && (
+      {selectedCondition === null && (
         <Button
           title="Log Out"
           onPress={() => {
@@ -137,9 +227,8 @@ const AdminHome = () => {
               .then(() => Alert.alert('You signed out!'));
           }}
         />
-      )} */}
-     <Toast  />
-
+      )}
+      <Toast />
     </View>
   );
 };
@@ -151,7 +240,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heading: {
-    fontSize: 18,
+    fontSize: 30,
     fontWeight: 'bold',
     marginBottom: 16,
   },
@@ -159,13 +248,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   conditionText: {
-    fontSize: 16,
+    fontSize: 21,
     marginBottom: 8,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
+  availableText:{
+    fontSize: 21,
+    borderColor:'black',
+    marginBottom: 8,
+  },
+  notAvailableText: {
+    fontSize: 21,
+    marginBottom: 8,
+    justifyContent: 'flex-end',
+    alignItems: 'center', // Add this line to center the text vertically
+  }
+  
 });
 
 export default AdminHome;

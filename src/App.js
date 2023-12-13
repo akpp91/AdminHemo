@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React, { useEffect } from 'react'
 import AdminLoginScreen from './screens/AdminLoginScreen'
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,8 +9,9 @@ import { Provider, useDispatch, useSelector } from 'react-redux';
 import AdminHome from './screens/AdminHome';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { auth } from './common/FireStoreapp';
-import { AuthUpdate } from './redux/AuthSlice';
+import { AuthUpdate, logoutSuccess } from './redux/AuthSlice';
 import PasswordResetScreen from './screens/PasswordResetScreen';
+import Toast from 'react-native-toast-message';
 
 
 const stack = createNativeStackNavigator();
@@ -27,13 +28,15 @@ const AppNavigator = () => {
       <AuthStack.Screen name='AdminLoginScreen'
         component={AdminLoginScreen}
         options={{
-          title: "AdminLoginScreen"
+          title: "AdminLoginScreen",
+          headerShown: false,
         }} />
 
       <AuthStack.Screen name='AdminSignUpScreen'
         component={AdminSignUpScreen}
         options={{
-          title: "AdminSignUpScreen"
+          title: "AdminSignUpScreen",
+          headerShown: false,
         }} />
 
       <AuthStack.Screen name='PasswordResetScreen'
@@ -56,7 +59,20 @@ const AppNavigator2 = () => {
       <HospitalStack.Screen name='AdminHome'
         component={AdminHome}
         options={{
-          title: "AdminHome"
+          title: "AdminHome",
+          headerRight: () => (
+            <TouchableOpacity
+              style={{ marginRight: 10 }}
+              onPress={() => {
+                logoutSuccess();
+                getAuth()
+                  .signOut()
+                  .then(() => Alert.alert('You signed out!'));
+              }}
+            >
+              <Text style={{ color: 'red' }}>Logout</Text>
+            </TouchableOpacity>
+          ),
         }} />
 
 
