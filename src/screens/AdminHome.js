@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Alert, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Alert, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useSelector } from 'react-redux';
 import { getFirestore, collection, doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../common/FireStoreapp';
 import { getAuth } from 'firebase/auth';
 import { logoutSuccess } from '../redux/AuthSlice';
-import { Button } from '@rneui/themed';
+import { Button, Card } from '@rneui/themed';
 import NetInfo from '@react-native-community/netinfo';
 import { LogBox } from 'react-native';
+import { CardDivider } from '@rneui/base/dist/Card/Card.Divider';
 
 const AdminHome = () => {
   const [conditions, setConditions] = useState([]);
@@ -189,16 +190,27 @@ const AdminHome = () => {
   LogBox.ignoreLogs(['@firebase/firestore']);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>Answer the following questions:</Text>
+    <Card style={styles.container}>
+      <ScrollView>
+    <View >
+    <Card.Title>Answer the following questions:</Card.Title>
+    <Card.Divider/>
+
+      
+      
       {conditions.map((condition, index) => (
         <View key={index} style={styles.conditionContainer}>
-          <Text style={styles.conditionText}>{`Is Medicine Available for ${condition.condition}:`}</Text>
+          <Text style={styles.conditionText}>{`Is Factor Available for ${condition.condition}:`}</Text>
+          
+          <CardDivider/>
+
           {condition.isMedicineAvailable ? (
             <Text style={styles.availableText}>Yes</Text>
           ) : (
             <Text style={styles.notAvailableText}>No</Text>
           )}
+
+          <CardDivider/>
           {selectedCondition === condition.condition ? (
             <View style={styles.buttonContainer}>
               {isLoading ? ( // Display spinner if loading
@@ -213,23 +225,16 @@ const AdminHome = () => {
           ) : (
             <Button title={`Update for ${condition.condition}`} onPress={() => setSelectedCondition(condition.condition)} />
           )}
+          
+          <CardDivider style={{width:"80%",margin:20 }}/>
         </View>
+        
       ))}
-
-      {/* Display the "Log Out" button if no condition is being edited */}
-      {selectedCondition === null && (
-        <Button
-          title="Log Out"
-          onPress={() => {
-            logoutSuccess();
-            getAuth()
-              .signOut()
-              .then(() => Alert.alert('You signed out!'));
-          }}
-        />
-      )}
+      
       <Toast />
     </View>
+    </ScrollView>
+    </Card>
   );
 };
 
@@ -237,7 +242,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    justifyContent: 'center',
   },
   heading: {
     fontSize: 30,

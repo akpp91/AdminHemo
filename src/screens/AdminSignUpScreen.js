@@ -38,8 +38,7 @@ const AdminSignUpScreen = ({ navigation }) => {
 
 
   const conditions = [{ condition: 'Hemophilia A', isMedicineAvailable: false },
-  { condition: 'Hemophilia B', isMedicineAvailable: false },
-  { condition: 'Thalassemia', isMedicineAvailable: false }];
+  { condition: 'Hemophilia B', isMedicineAvailable: false }];
 
   const toggleConditionModal = () => {
     dispatch(AuthUpdate({ prop: 'isConditionModalVisible', value: !isConditionModalVisible }))
